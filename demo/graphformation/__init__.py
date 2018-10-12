@@ -5,7 +5,7 @@ from graphformation import executor
 graph = {}
 
 
-_reserved_words = ["id"]
+_reserved_words = ["ref"]
 
 
 def _verify_id(id):
@@ -44,7 +44,7 @@ class Ref(object):
 
     def json_repr(self):
         return {
-            "ref": self.obj.id
+            "!ref": self.obj.id
         }
 
 
@@ -96,6 +96,7 @@ def graph_repr():
 def dump_graph():
     print(json.dumps(graph_repr(), indent=2))
 
-def execute():
+
+def execute(filename):
     repr = graph_repr()
-    executor.execute(repr)
+    executor.execute(filename, repr)

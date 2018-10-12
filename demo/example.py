@@ -16,8 +16,8 @@ file(
    id="downloadedfile",
    filename="file2",
    parent=ref(mydir),
-   source="https://webserver.com/file.txt"
+   source="https://webserver.com/file2.txt"
 )
 
-dump_graph()
-execute()
+#dump_graph()
+execute("/tmp/state.txt")
