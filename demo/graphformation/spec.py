@@ -99,4 +99,14 @@ def dump_graph():
 
 def execute(filename):
     repr = graph_repr()
-    executor.execute(filename, repr)
+    return executor.execute(filename, repr)
+
+
+def capture(f, old_state):
+    global graph
+    save_graph = graph
+    graph = {}
+    f() # run the program
+    result = execute(old_state)
+    graph = save_graph
+    return result

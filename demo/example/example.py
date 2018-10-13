@@ -1,7 +1,9 @@
-from graphformation import *
+from graphformation.spec import *
+from graphformation import runner
 
 mydir=directory(
   id="dir",
+  permissions="777",
   location="/tmp/mydirectory"
 )
 
@@ -12,6 +14,7 @@ file(
    text="Lorem ipsum dolor"
 )
 
+
 file(
    id="downloadedfile",
    filename="file2",
@@ -19,5 +22,6 @@ file(
    source="https://webserver.com/file2.txt"
 )
 
-#dump_graph()
-execute("/tmp/state.txt")
+
+if __name__ == "__main__":
+    runner.run()

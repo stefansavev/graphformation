@@ -1,5 +1,6 @@
 import json
 
+
 class Property(object):
     def __init__(self, *, required, mutable):
         self.required=required
@@ -42,9 +43,6 @@ class Schema(object):
             else:
                 # must be custom validator
                 prop_def.required(resource)
-
-
-
 
 
 class Directory(Schema):

@@ -41,6 +41,11 @@ class ScriptCtx(object):
         r = "\n".join(map(lambda x: x.dump(2), self.operations))
         print(r)
 
+    def dump_str(self):
+        r = "\n".join(map(lambda x: x.dump(2), self.operations))
+        return r
+
+
 class ExecutableResource(object):
     def __init__(self, resource):
         self.resource=resource
@@ -63,14 +68,17 @@ class Directory(ExecutableResource):
     def requires_recreate(self, ctx, old_resource):
         # TODO
         # yes, if the resource name has been changed
-        return False
+        changed_props = _resource_diff(self.resource, old_resource)
+        yes = "location" in changed_props
+        return yes
 
     def update(self, ctx, changed_properties):
         op = ctx.operation("update", self.resource, "change permissions")
         props = self.resource["properties"]
         for prop in changed_properties:
-            if prop == "location":
-                op.command("chmod {permissions} {dirname}".format(props["location"], props["permissions"]))
+            if prop == "permissions":
+                print(props)
+                op.command("chmod {permissions} {dirname}".format(dirname=props["location"], permissions=props["permissions"]))
         self.update_status("updated", {})
 
 
@@ -155,13 +163,11 @@ def _resource_diff(new_resource, old_resource):
 
 
 def _diff(ctx, new_state, old_state):
-    new_keys = set(old_state.keys())
-    old_keys = set(new_state.keys())
+    new_keys = set(new_state.keys())
+    old_keys = set(old_state.keys())
     inserted = list(new_keys.difference(old_keys))
     deleted = list(old_keys.difference(new_keys))
     modified_candidates = new_keys.intersection(old_keys)
-
-
 
     while True:
         modified = []
@@ -181,7 +187,7 @@ def _diff(ctx, new_state, old_state):
                 continue
             assert new_obj['type'] == old_obj['type']
             exec = from_type(new_obj['type'])(new_obj)
-            if exec.requires_recreate(ctx, new_obj, old_obj):
+            if exec.requires_recreate(ctx, old_obj):
                 must_be_recreated.append(m)
                 continue
             new_modified.append(m)
@@ -222,33 +228,52 @@ def topological_sort(graph):
     return list(toposort(items))
 
 
-
 def execute(filename, graph_repr):
     # TODO: sort the graph topologically
 
     sorted_new_keys = topological_sort(graph_repr)
-    old_state = _read_state(filename)
+    # TODO:
+    if isinstance(filename, str):
+        old_state = _read_state(filename)
+    else:
+        old_state=filename
     sorted_old_keys = topological_sort(old_state)
     ctx = ScriptCtx(graph_repr)
     diff = _diff(ctx, graph_repr, old_state)
+    deleted = 0
+    for key_group in sorted_old_keys[::-1]:
+        for key in key_group:
+            if key in diff['deleted']:
+                repr = old_state[key]
+                exec = from_type(repr["type"])(repr)
+                exec.delete(ctx)
+                deleted += 1
 
-    for key in sorted_old_keys[::-1]:
-        if key in diff['deleted']:
-            repr = old_state[key]
-            exec = from_type(repr["type"])(repr)
-            exec.delete(ctx)
+    created = 0
+    for key_group in sorted_new_keys:
+        for key in key_group:
+            if key in diff['created']:
+                repr = graph_repr[key]
+                exec = from_type(repr["type"])(repr)
+                exec.create(ctx)
+                created += 1
 
-    for key in sorted_new_keys:
-        if key in diff['created']:
-            repr = graph_repr[key]
-            exec = from_type(repr["type"])(repr)
-            exec.create(ctx)
+    modified = 0
+    for key_group in sorted_new_keys:
+        for key in key_group:
+            if key in diff['modified']:
+                repr = graph_repr[key]
+                exec = from_type(repr["type"])(repr)
+                changed_props = _resource_diff(graph_repr[key], old_state[key])
+                exec.update(ctx, changed_props)
+                modified += 1
 
-    for repr in graph_repr.values():
-        exec = from_type(repr["type"])(repr)
-        exec.create(ctx)
+    print("{deleted} deleted".format(deleted=deleted))
+    print("{created} created".format(created=created))
+    print("{modified} modified".format(modified=modified))
 
-    ctx.dump()
-    with open(filename, 'w') as f:
-        f.write(json.dumps(graph_repr, indent=2))
-    #print(json.dumps(graph_repr, indent=2))
+    return graph_repr, ctx.dump_str()
+    # TODO
+    #ctx.dump()
+    #with open(filename, 'w') as f:
+    #    f.write(json.dumps(graph_repr, indent=2))
