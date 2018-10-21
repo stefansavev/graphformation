@@ -284,7 +284,8 @@ wget https://webserver.com/file.txt /tmp/mydirectory/file2
 ```
 
 For more details stay tuned for the actual blog post. In the meantime you can refer to the [source code](https://github.com/stefansavev/graphformation/tree/master/demo/graphformation)
-
+and in particular the [test cases](https://github.com/stefansavev/graphformation/blob/master/demo/test/test.py).
+ 
 I believe going through this exercise is beneficial to learn how tools and CloudFormation and Terraform do their job.
 
 

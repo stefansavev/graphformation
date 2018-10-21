@@ -1,6 +1,23 @@
 from graphformation.spec import *
-from graphformation import runner
 
+"""
+We simutate running two version of the program
+
+In version 1 we setup the infrastructure
+In version 2 we modify the infrastructure
+
+Because this library was designed with a global state, we 
+had to introduce a new function, execute_change_program which leaves
+the global state as it has found it.
+
+Each test has two programs:
+p1(): gives the initial infrastructure
+p2(): gives the modified infrastructure
+
+both programs return the new state and the "operations" than have to be executed
+to bring the environment into the desired state
+
+"""
 
 def test_no_change():
     """
@@ -55,6 +72,9 @@ chmod 770 /tmp/mydirectory
 
 
 def test_remove_resource():
+    """
+    we test deletion of a resource
+    """
     def p1():
         directory(
           id="dir",
@@ -77,6 +97,9 @@ rm -fr /tmp/mydirectory
 
 
 def test_add_new_resource():
+    """
+    we test adding a new resource
+    """
     def p1():
         directory(
           id="dir",
@@ -108,6 +131,9 @@ mkdir -f /tmp/another_directory
 
 
 def test_change_ref_property():
+    """
+    we test changing a property
+    """
     def p1():
         dir1 = directory(
           id="dir",
@@ -170,6 +196,9 @@ ENDOFFILE > /tmp/another_directory/file1
 
 
 def test_swap_two_mutable_references():
+    """
+    we test swapping two mutable references. in this case no objects have to be re-created
+    """
     def p1():
         r1 = dummy_ref_resource(
             id="resource1",
@@ -207,6 +236,9 @@ echo update: [{"new_value": {"!ref": "resource2"}, "old_value": null, "property"
 
 
 def test_swap_two_immutable_references():
+    """
+    we test swapping two immutable references. in this case objects need to be re-created
+    """
     def p1():
         r1 = dummy_ref_resource(
             id="resource1",
