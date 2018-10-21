@@ -120,8 +120,7 @@ def test_add_new_resource():
         )
     state0, exec0=execute_change_program(lambda: p1(), {})
     state1, exec1=execute_change_program(lambda: p2(), state0)
-    with open('/tmp/f4.txt', 'w') as f:
-        f.write(exec1)
+
     expected_exec1 = """
 # create directory another_dir
 mkdir -f /tmp/another_directory 
@@ -261,9 +260,6 @@ def test_swap_two_immutable_references():
 
     state0, exec0 = execute_change_program(lambda: p1(), {})
     state1, exec1 = execute_change_program(lambda: p2(), state0)
-
-    with open('/tmp/f10.txt', 'w') as f:
-        f.write(exec1)
 
     expected_exec1 = """
 # delete dummy_ref_resource resource2
