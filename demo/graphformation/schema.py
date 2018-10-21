@@ -38,8 +38,9 @@ class Schema(object):
             raise Exception("Internal error. Wrong resource type passed to schema")
 
         for propname, prop_def in self.properties.items():
-            if type(prop_def.required) == type(True) and prop_def.required:
-                _required_validator(resource, propname)
+            if type(prop_def.required) == bool:
+                if prop_def.required:
+                    _required_validator(resource, propname)
             else:
                 # must be custom validator
                 prop_def.required(resource)
@@ -69,9 +70,20 @@ class File(Schema):
         super().__init__("file", properties)
 
 
+class DummyRefResource(Schema):
+    def __init__(self):
+        properties = {
+            "mutable_parent": Property(required=False, mutable=True),
+            "immutable_parent": Property(required=False, mutable=False)
+        }
+
+        super().__init__("dummy_ref_resource", properties)
+
+
 schemas = {
     "directory": Directory(),
-    "file": File()
+    "file": File(),
+    "dummy_ref_resource": DummyRefResource()
 }
 
 

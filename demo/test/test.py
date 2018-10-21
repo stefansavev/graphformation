@@ -3,6 +3,9 @@ from graphformation import runner
 
 
 def test_no_change():
+    """
+    If we run the same program again, there should be not change detected
+    """
     def p1():
         directory(
           id="dir",
@@ -17,12 +20,15 @@ def test_no_change():
             location="/tmp/mydirectory"
         )
 
-    state0, exec0=capture(lambda: p1(), {})
-    state1, exec1=capture(lambda: p2(), state0)
-    assert(exec1.stri() == "")
+    state0, exec0=execute_change_program(lambda: p1(), {})
+    state1, exec1=execute_change_program(lambda: p2(), state0)
+    assert(exec1.strip() == "")
 
 
 def test_prop_change():
+    """
+    If we change a single property (here permission), an update command should be executed
+    """
     def p1():
         directory(
           id="dir",
@@ -37,27 +43,214 @@ def test_prop_change():
             location="/tmp/mydirectory"
         )
 
-    state0, exec0=capture(lambda: p1(), {})
-    state1, exec1=capture(lambda: p2(), state0)
+    state0, exec0=execute_change_program(lambda: p1(), {})
+    state1, exec1=execute_change_program(lambda: p2(), state0)
+
     expected_exec1 = """
-"""
-    assert(exec1 == expected_exec1)
+# update directory dir
+chmod 770 /tmp/mydirectory 
+# end
+    """
+    assert(exec1.strip() == expected_exec1.strip())
 
-def ignore():
-    print("State 0")
-    print("--------------------------")
-    print(json.dumps(state0, indent=2))
-    print("--------------------------")
-    print(exec0)
-    print("--------------------------")
 
-    print("\n\n")
-    print("State 1")
-    print("--------------------------")
-    print(json.dumps(state1, indent=2))
-    print("--------------------------")
-    print(exec1)
-    print("--------------------------")
+def test_remove_resource():
+    def p1():
+        directory(
+          id="dir",
+          permissions="777",
+          location="/tmp/mydirectory"
+        )
 
-    # if __name__ == "__main__":
-    #    runner.run()
+    def p2():
+        pass
+
+    state0, exec0=execute_change_program(lambda: p1(), {})
+    state1, exec1=execute_change_program(lambda: p2(), state0)
+
+    expected_exec1 = """
+# delete directory dir
+rm -fr /tmp/mydirectory 
+# end
+    """
+    assert(exec1.strip() == expected_exec1.strip())
+
+
+def test_add_new_resource():
+    def p1():
+        directory(
+          id="dir",
+          permissions="777",
+          location="/tmp/mydirectory"
+        )
+
+    def p2():
+        directory(
+          id="dir",
+          permissions="777",
+          location="/tmp/mydirectory"
+        )
+        directory(
+          id="another_dir",
+          permissions="777",
+          location="/tmp/another_directory"
+        )
+    state0, exec0=execute_change_program(lambda: p1(), {})
+    state1, exec1=execute_change_program(lambda: p2(), state0)
+    with open('/tmp/f4.txt', 'w') as f:
+        f.write(exec1)
+    expected_exec1 = """
+# create directory another_dir
+mkdir -f /tmp/another_directory 
+# end
+    """
+    assert(exec1.strip() == expected_exec1.strip())
+
+
+def test_change_ref_property():
+    def p1():
+        dir1 = directory(
+          id="dir",
+          permissions="777",
+          location="/tmp/mydirectory"
+        )
+
+        directory(
+          id="another_dir",
+          permissions="777",
+          location="/tmp/another_directory"
+        )
+
+        file(
+            id="contentfile",
+            filename="file1",
+            parent=ref(dir1),
+            text="Lorem ipsum dolor"
+        )
+
+    def p2():
+        directory(
+          id="dir",
+          permissions="777",
+          location="/tmp/mydirectory"
+        )
+
+        dir2 = directory(
+          id="another_dir",
+          permissions="777",
+          location="/tmp/another_directory"
+        )
+
+        file(
+            id="contentfile",
+            filename="file1",
+            parent=ref(dir2),
+            text="Lorem ipsum dolor"
+        )
+
+
+    state0, exec0=execute_change_program(lambda: p1(), {})
+    state1, exec1=execute_change_program(lambda: p2(), state0)
+
+    expected_exec1="""
+# delete file contentfile
+rm -f /tmp/mydirectory/file1 
+# end
+
+
+# create file contentfile
+echo << ENDOFFILE
+Lorem ipsum dolor
+ENDOFFILE > /tmp/another_directory/file1
+ 
+# end
+    """
+
+    assert(exec1.strip() == expected_exec1.strip())
+
+
+def test_swap_two_mutable_references():
+    def p1():
+        r1 = dummy_ref_resource(
+            id="resource1",
+        )
+
+        dummy_ref_resource(
+            id="resource2",
+            mutable_parent=ref(r1)
+        )
+
+    def p2():
+        r2 = dummy_ref_resource(
+            id="resource2",
+        )
+
+        dummy_ref_resource(
+            id="resource1",
+            mutable_parent=ref(r2)
+        )
+
+    state0, exec0 = execute_change_program(lambda: p1(), {})
+    state1, exec1 = execute_change_program(lambda: p2(), state0)
+
+    expected_exec1 = """
+# update dummy_ref_resource resource2
+echo update: [{"new_value": null, "old_value": {"!ref": "resource1"}, "property": "mutable_parent"}] 
+# end
+
+
+# update dummy_ref_resource resource1
+echo update: [{"new_value": {"!ref": "resource2"}, "old_value": null, "property": "mutable_parent"}] 
+# end
+    """
+    assert (exec1.strip() == expected_exec1.strip())
+
+
+def test_swap_two_immutable_references():
+    def p1():
+        r1 = dummy_ref_resource(
+            id="resource1",
+        )
+
+        dummy_ref_resource(
+            id="resource2",
+            immutable_parent=ref(r1)
+        )
+
+    def p2():
+        r2 = dummy_ref_resource(
+            id="resource2",
+        )
+
+        dummy_ref_resource(
+            id="resource1",
+            immutable_parent=ref(r2)
+        )
+
+    state0, exec0 = execute_change_program(lambda: p1(), {})
+    state1, exec1 = execute_change_program(lambda: p2(), state0)
+
+    with open('/tmp/f10.txt', 'w') as f:
+        f.write(exec1)
+
+    expected_exec1 = """
+# delete dummy_ref_resource resource2
+echo delete: {"computed_props": {}, "id": "resource2", "properties": {"immutable_parent": {"!ref": "resource1"}}, "status": "created", "type": "dummy_ref_resource"} 
+# end
+
+
+# delete dummy_ref_resource resource1
+echo delete: {"computed_props": {}, "id": "resource1", "properties": {}, "status": "created", "type": "dummy_ref_resource"} 
+# end
+
+
+# create dummy_ref_resource resource2
+echo create: {"id": "resource2", "properties": {}, "type": "dummy_ref_resource"} 
+# end
+
+
+# create dummy_ref_resource resource1
+echo create: {"id": "resource1", "properties": {"immutable_parent": {"!ref": "resource2"}}, "type": "dummy_ref_resource"} 
+# end
+    """
+    assert (exec1.strip() == expected_exec1.strip())

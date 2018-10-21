@@ -1,6 +1,7 @@
 import json, os
 from graphformation import schema
-from toposort import toposort, toposort_flatten
+from toposort import toposort
+
 
 class OpCtx(object):
     def __init__(self, op_type, resource, comment=None):
@@ -20,6 +21,7 @@ class OpCtx(object):
         repr += commands_repr
         repr += "\n# end\n\n"
         return repr
+
 
 class ScriptCtx(object):
     def __init__(self, repr):
@@ -54,6 +56,7 @@ class ExecutableResource(object):
         self.resource["status"] = status
         self.resource["computed_props"] = computed_props
 
+
 class Directory(ExecutableResource):
     def __init__(self, resource):
         self.schema = schema.from_type("directory")
@@ -66,21 +69,20 @@ class Directory(ExecutableResource):
         self.update_status("created", {})
 
     def requires_recreate(self, ctx, old_resource):
-        # TODO
-        # yes, if the resource name has been changed
+        # we recreate if location has been changed
         changed_props = _resource_diff(self.resource, old_resource)
-        yes = "location" in changed_props
+        changed_props_keys = map(lambda p: p["property"], changed_props)
+        yes = "location" in changed_props_keys
         return yes
 
     def update(self, ctx, changed_properties):
         op = ctx.operation("update", self.resource, "change permissions")
         props = self.resource["properties"]
-        for prop in changed_properties:
+        for prop_change in changed_properties:
+            prop = prop_change["property"]
             if prop == "permissions":
-                print(props)
                 op.command("chmod {permissions} {dirname}".format(dirname=props["location"], permissions=props["permissions"]))
         self.update_status("updated", {})
-
 
     def delete(self, ctx):
         op = ctx.operation("delete", self.resource, "change permissions")
@@ -113,10 +115,10 @@ ENDOFFILE > {fullpath}
         op.command(cmd)
         self.update_status("created", {})
 
-    def requires_recreate(self, ctx, new_obj, old_obj):
+    def requires_recreate(self, ctx, old_obj):
         return True
 
-    def update(self, ctx):
+    def update(self, ctx, changed_properties):
         raise Exception("This resource always require recreate")
 
     def delete(self, ctx):
@@ -129,9 +131,41 @@ ENDOFFILE > {fullpath}
         self.update_status("deleted", {})
 
 
+class DummyRefResource(ExecutableResource):
+    def __init__(self, resource):
+        self.resource=resource
+        self.schema=schema.from_type("dummy_ref_resource")
+        super().__init__(resource)
+
+    def create(self, ctx):
+        op = ctx.operation("create", self.resource)
+        cmd = "echo create: " + json.dumps(self.resource, sort_keys=True)
+        op.command(cmd)
+        self.update_status("created", {})
+
+    def requires_recreate(self, ctx, old_resource):
+        changed_props = _resource_diff(self.resource, old_resource)
+        changed_props_keys = map(lambda p: p["property"], changed_props)
+        yes = "immutable_parent" in changed_props_keys
+        return yes
+
+    def update(self, ctx, changed_properties):
+        op = ctx.operation("update", self.resource)
+        cmd = "echo update: " + json.dumps(changed_properties, sort_keys=True)
+        op.command(cmd)
+        self.update_status("deleted", {})
+
+    def delete(self, ctx):
+        op = ctx.operation("delete", self.resource)
+        cmd = "echo delete: " + json.dumps(self.resource, sort_keys=True)
+        op.command(cmd)
+        self.update_status("deleted", {})
+
+
 schemas = {
     "directory": lambda r: Directory(r),
-    "file": lambda r: File(r)
+    "file": lambda r: File(r),
+    "dummy_ref_resource": lambda r: DummyRefResource(r)
 }
 
 
@@ -156,9 +190,12 @@ def _resource_diff(new_resource, old_resource):
     for prop in all_properties:
         old_value = old_resource['properties'].get(prop, None)
         new_value = new_resource['properties'].get(prop, None)
-        print(prop, old_value, new_value)
         if old_value != new_value:
-            diff_props.append(prop)
+            diff_props.append({
+                "property": prop,
+                "old_value": old_value,
+                "new_value": new_value
+            })
     return diff_props
 
 

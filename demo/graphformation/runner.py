@@ -14,6 +14,7 @@ parser.add_argument("-show-json", help="Shows the json representation of the pro
 def run():
     args = parser.parse_args()
     if args.deploy:
+        # TODO:
         print(args.deploy)
         print(args.statefile)
         print(args.dryrun)

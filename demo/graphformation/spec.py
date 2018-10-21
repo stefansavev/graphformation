@@ -1,7 +1,11 @@
 import json
 from graphformation import schema
 from graphformation import executor
-# for simplicity our graph is global
+
+"""
+ for simplicity our graph is global
+ see execute_change_program how to execute two programs without poluting the state
+"""
 graph = {}
 
 
@@ -81,6 +85,13 @@ def file(*, id, parent, filename=None, text=None, source=None, permissions="600"
     })
 
 
+def dummy_ref_resource(*, id, mutable_parent=None, immutable_parent=None):
+    return _define(id, "dummy_ref_resource", {
+        "mutable_parent": mutable_parent,
+        "immutable_parent": immutable_parent,
+    })
+
+
 def ref(input):
     return Ref(input)
 
@@ -94,7 +105,7 @@ def graph_repr():
 
 
 def dump_graph():
-    print(json.dumps(graph_repr(), indent=2))
+    print(json.dumps(graph_repr(), indent=2, sort_keys=True))
 
 
 def execute(filename):
@@ -102,7 +113,7 @@ def execute(filename):
     return executor.execute(filename, repr)
 
 
-def capture(f, old_state):
+def execute_change_program(f, old_state):
     global graph
     save_graph = graph
     graph = {}
