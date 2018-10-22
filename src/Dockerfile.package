@@ -1,0 +1,10 @@
+FROM python:3.6.6-stretch
+
+WORKDIR /usr/graphformation
+
+RUN pip install nose
+
+COPY . .
+
+RUN python setup.py develop test sdist
+

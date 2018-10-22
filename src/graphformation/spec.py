@@ -117,7 +117,9 @@ def execute_change_program(f, old_state):
     global graph
     save_graph = graph
     graph = {}
-    f() # run the program
-    result = execute(old_state)
-    graph = save_graph
+    try:
+        f() # run the program
+        result = execute(old_state)
+    finally:
+        graph = save_graph
     return result

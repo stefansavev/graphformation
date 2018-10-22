@@ -29,7 +29,7 @@ class ScriptCtx(object):
         self.operations = []
 
     def operation(self, type, resource, comment=None):
-        operation = OpCtx(type, resource, comment=None)
+        operation = OpCtx(type, resource, comment=comment)
         self.operations.append(operation)
         return operation
 
@@ -265,15 +265,13 @@ def topological_sort(graph):
     return list(toposort(items))
 
 
-def execute(filename, graph_repr):
-    # TODO: sort the graph topologically
-
+def execute(filename_or_state, graph_repr):
     sorted_new_keys = topological_sort(graph_repr)
     # TODO:
-    if isinstance(filename, str):
-        old_state = _read_state(filename)
+    if isinstance(filename_or_state, str):
+        old_state = _read_state(filename_or_state)
     else:
-        old_state=filename
+        old_state=filename_or_state
     sorted_old_keys = topological_sort(old_state)
     ctx = ScriptCtx(graph_repr)
     diff = _diff(ctx, graph_repr, old_state)

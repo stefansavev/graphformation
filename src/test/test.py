@@ -1,7 +1,7 @@
 from graphformation.spec import *
 
 """
-We simutate running two version of the program
+We simulate running two versions of the program
 
 In version 1 we setup the infrastructure
 In version 2 we modify the infrastructure
@@ -16,8 +16,8 @@ p2(): gives the modified infrastructure
 
 both programs return the new state and the "operations" than have to be executed
 to bring the environment into the desired state
-
 """
+
 
 def test_no_change():
     """
