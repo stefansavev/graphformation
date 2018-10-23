@@ -19,7 +19,7 @@ def run():
         print(args.statefile)
         print(args.dryrun)
     elif args.show_json:
-        spec.dump_graph()
+        spec.print_graph()
     else:
         print("No arguments have been specified. Run with -h and read the help.")
 

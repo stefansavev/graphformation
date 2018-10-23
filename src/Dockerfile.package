@@ -2,9 +2,9 @@ FROM python:3.6.6-stretch
 
 WORKDIR /usr/graphformation
 
-RUN pip install nose
+RUN pip install nose pylint toposort
 
 COPY . .
 
-RUN python setup.py develop test sdist
-
+RUN ./lint.sh && \
+    python setup.py develop test sdist

@@ -7,7 +7,7 @@ class OpCtx(object):
     def __init__(self, op_type, resource, comment=None):
         self.comment = "# {op_type} {resource_type} {resource_id}".format(
             op_type = op_type,
-            resource_type=resource["type"],
+            resource_type=resource["resource_type"],
             resource_id=resource["id"]
         )
         self.commands = []
@@ -175,14 +175,6 @@ def from_type(type):
     return schemas[type]
 
 
-def _read_state(filename):
-    if not os.path.isfile(filename):
-        return {}
-    with open(filename, 'r') as f:
-        contents = f.read()
-    return json.loads(contents)
-
-
 def _resource_diff(new_resource, old_resource):
     old_properties, new_properties = old_resource['properties'], new_resource['properties']
     all_properties = set(old_properties).union(set(new_properties))
@@ -219,11 +211,11 @@ def _diff(ctx, new_state, old_state):
         for m in modified:
             new_obj = new_state[m]
             old_obj = old_state[m]
-            if new_obj['type'] != old_obj['type']:
+            if new_obj['resource_type'] != old_obj['resource_type']:
                 must_be_recreated.append(m)
                 continue
-            assert new_obj['type'] == old_obj['type']
-            exec = from_type(new_obj['type'])(new_obj)
+            assert new_obj['resource_type'] == old_obj['resource_type']
+            exec = from_type(new_obj['resource_type'])(new_obj)
             if exec.requires_recreate(ctx, old_obj):
                 must_be_recreated.append(m)
                 continue
@@ -265,13 +257,9 @@ def topological_sort(graph):
     return list(toposort(items))
 
 
-def execute(filename_or_state, graph_repr):
+def execute(old_state, graph_repr):
     sorted_new_keys = topological_sort(graph_repr)
-    # TODO:
-    if isinstance(filename_or_state, str):
-        old_state = _read_state(filename_or_state)
-    else:
-        old_state=filename_or_state
+
     sorted_old_keys = topological_sort(old_state)
     ctx = ScriptCtx(graph_repr)
     diff = _diff(ctx, graph_repr, old_state)
@@ -280,7 +268,7 @@ def execute(filename_or_state, graph_repr):
         for key in key_group:
             if key in diff['deleted']:
                 repr = old_state[key]
-                exec = from_type(repr["type"])(repr)
+                exec = from_type(repr["resource_type"])(repr)
                 exec.delete(ctx)
                 deleted += 1
 
@@ -289,7 +277,7 @@ def execute(filename_or_state, graph_repr):
         for key in key_group:
             if key in diff['created']:
                 repr = graph_repr[key]
-                exec = from_type(repr["type"])(repr)
+                exec = from_type(repr["resource_type"])(repr)
                 exec.create(ctx)
                 created += 1
 
@@ -298,7 +286,7 @@ def execute(filename_or_state, graph_repr):
         for key in key_group:
             if key in diff['modified']:
                 repr = graph_repr[key]
-                exec = from_type(repr["type"])(repr)
+                exec = from_type(repr["resource_type"])(repr)
                 changed_props = _resource_diff(graph_repr[key], old_state[key])
                 exec.update(ctx, changed_props)
                 modified += 1
@@ -308,7 +296,4 @@ def execute(filename_or_state, graph_repr):
     print("{modified} modified".format(modified=modified))
 
     return graph_repr, ctx.dump_str()
-    # TODO
-    #ctx.dump()
-    #with open(filename, 'w') as f:
-    #    f.write(json.dumps(graph_repr, indent=2))
+

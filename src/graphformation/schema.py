@@ -26,15 +26,15 @@ def _required_validator(resource, expected_property):
 
 
 class Schema(object):
-    def __init__(self, type, properties):
-        self.type = type
+    def __init__(self, resource_type, properties):
+        self.resource_type = resource_type
         self.properties = properties
 
     def validate_definition(self, resource):
         self.validate("define", resource)
 
     def validate(self, operation, resource):
-        if resource["type"] != self.type:
+        if resource["resource_type"] != self.resource_type:
             raise Exception("Internal error. Wrong resource type passed to schema")
 
         for propname, prop_def in self.properties.items():

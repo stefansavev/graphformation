@@ -9,7 +9,7 @@ setup(name='graphformation',
       license='Apache',
       packages=['graphformation'],
       install_requires=[
-            'toposort',
+          'toposort',
       ],
       test_suite='nose.collector',
       tests_require=['nose'],

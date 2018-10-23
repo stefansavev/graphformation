@@ -25,14 +25,14 @@ def test_no_change():
     """
     def p1():
         directory(
-          id="dir",
+          resource_id="dir",
           permissions="777",
           location="/tmp/mydirectory"
         )
 
     def p2():
         directory(
-            id="dir",
+            resource_id="dir",
             permissions="777",
             location="/tmp/mydirectory"
         )
@@ -48,14 +48,14 @@ def test_prop_change():
     """
     def p1():
         directory(
-          id="dir",
+          resource_id="dir",
           permissions="777",
           location="/tmp/mydirectory"
         )
 
     def p2():
         directory(
-            id="dir",
+            resource_id="dir",
             permissions="770",
             location="/tmp/mydirectory"
         )
@@ -77,7 +77,7 @@ def test_remove_resource():
     """
     def p1():
         directory(
-          id="dir",
+          resource_id="dir",
           permissions="777",
           location="/tmp/mydirectory"
         )
@@ -102,19 +102,19 @@ def test_add_new_resource():
     """
     def p1():
         directory(
-          id="dir",
+          resource_id="dir",
           permissions="777",
           location="/tmp/mydirectory"
         )
 
     def p2():
         directory(
-          id="dir",
+          resource_id="dir",
           permissions="777",
           location="/tmp/mydirectory"
         )
         directory(
-          id="another_dir",
+          resource_id="another_dir",
           permissions="777",
           location="/tmp/another_directory"
         )
@@ -135,19 +135,19 @@ def test_change_ref_property():
     """
     def p1():
         dir1 = directory(
-          id="dir",
+          resource_id="dir",
           permissions="777",
           location="/tmp/mydirectory"
         )
 
         directory(
-          id="another_dir",
+          resource_id="another_dir",
           permissions="777",
           location="/tmp/another_directory"
         )
 
         file(
-            id="contentfile",
+            resource_id="contentfile",
             filename="file1",
             parent=ref(dir1),
             text="Lorem ipsum dolor"
@@ -155,19 +155,19 @@ def test_change_ref_property():
 
     def p2():
         directory(
-          id="dir",
+          resource_id="dir",
           permissions="777",
           location="/tmp/mydirectory"
         )
 
         dir2 = directory(
-          id="another_dir",
+          resource_id="another_dir",
           permissions="777",
           location="/tmp/another_directory"
         )
 
         file(
-            id="contentfile",
+            resource_id="contentfile",
             filename="file1",
             parent=ref(dir2),
             text="Lorem ipsum dolor"
@@ -200,21 +200,21 @@ def test_swap_two_mutable_references():
     """
     def p1():
         r1 = dummy_ref_resource(
-            id="resource1",
+            resource_id="resource1",
         )
 
         dummy_ref_resource(
-            id="resource2",
+            resource_id="resource2",
             mutable_parent=ref(r1)
         )
 
     def p2():
         r2 = dummy_ref_resource(
-            id="resource2",
+            resource_id="resource2",
         )
 
         dummy_ref_resource(
-            id="resource1",
+            resource_id="resource1",
             mutable_parent=ref(r2)
         )
 
@@ -240,21 +240,21 @@ def test_swap_two_immutable_references():
     """
     def p1():
         r1 = dummy_ref_resource(
-            id="resource1",
+            resource_id="resource1",
         )
 
         dummy_ref_resource(
-            id="resource2",
+            resource_id="resource2",
             immutable_parent=ref(r1)
         )
 
     def p2():
         r2 = dummy_ref_resource(
-            id="resource2",
+            resource_id="resource2",
         )
 
         dummy_ref_resource(
-            id="resource1",
+            resource_id="resource1",
             immutable_parent=ref(r2)
         )
 
@@ -263,22 +263,22 @@ def test_swap_two_immutable_references():
 
     expected_exec1 = """
 # delete dummy_ref_resource resource2
-echo delete: {"computed_props": {}, "id": "resource2", "properties": {"immutable_parent": {"!ref": "resource1"}}, "status": "created", "type": "dummy_ref_resource"} 
+echo delete: {"computed_props": {}, "id": "resource2", "properties": {"immutable_parent": {"!ref": "resource1"}}, "resource_type": "dummy_ref_resource", "status": "created"} 
 # end
 
 
 # delete dummy_ref_resource resource1
-echo delete: {"computed_props": {}, "id": "resource1", "properties": {}, "status": "created", "type": "dummy_ref_resource"} 
+echo delete: {"computed_props": {}, "id": "resource1", "properties": {}, "resource_type": "dummy_ref_resource", "status": "created"} 
 # end
 
 
 # create dummy_ref_resource resource2
-echo create: {"id": "resource2", "properties": {}, "type": "dummy_ref_resource"} 
+echo create: {"id": "resource2", "properties": {}, "resource_type": "dummy_ref_resource"} 
 # end
 
 
 # create dummy_ref_resource resource1
-echo create: {"id": "resource1", "properties": {"immutable_parent": {"!ref": "resource2"}}, "type": "dummy_ref_resource"} 
+echo create: {"id": "resource1", "properties": {"immutable_parent": {"!ref": "resource2"}}, "resource_type": "dummy_ref_resource"} 
 # end
     """
     assert (exec1.strip() == expected_exec1.strip())
