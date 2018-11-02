@@ -1,10 +1,19 @@
+# -*- coding: utf-8 -*-
+"""Spec
+
+In this module we define(specify) our schema
+"""
+
 import json
 
 
-class Property(object):
+class Property:
+    """
+    We represent an object property
+    """
     def __init__(self, *, required, mutable):
-        self.required=required
-        self.mutable=mutable
+        self.required = required
+        self.mutable = mutable
 
 
 def _one_of_validator(resource, expected_properties):
@@ -13,32 +22,50 @@ def _one_of_validator(resource, expected_properties):
     for prop in expected_properties:
         if defined_properties.get(prop, None):
             has_properties = prop
-    if len(has_properties) == 0:
-        raise Exception("Expected one of the following properties {expected_properties} to be defined for {obj}".
-                        format(expected_properties=", ".join(expected_properties), obj=json.dumps(resource, indent=2)))
+    if not has_properties:
+        raise Exception(("Expected one of the following properties "
+                         "{expected_properties} to be defined for {obj}").
+                        format(expected_properties=", ".join(expected_properties),
+                               obj=json.dumps(resource, indent=2)))
 
 
 def _required_validator(resource, expected_property):
     defined_properties = resource["properties"]
     if defined_properties.get(expected_property, None) is None:
         raise Exception("The property {expected_property} is expected to be defined for {obj}".
-                        format(expected_property=expected_property, obj=json.dumps(resource, indent=2)))
+                        format(expected_property=expected_property,
+                               obj=json.dumps(resource, indent=2)))
 
 
-class Schema(object):
+class Schema:
+    """
+    Schema represents the resource schema
+    """
     def __init__(self, resource_type, properties):
         self.resource_type = resource_type
         self.properties = properties
 
     def validate_definition(self, resource):
+        """
+        validates the definition.
+        raises an exception if the definition is invalid
+        :param resource:
+        :return: None
+        """
         self.validate("define", resource)
 
     def validate(self, operation, resource):
+        """
+        :param operation:
+        :param resource:
+        :return:
+        """
+        assert operation in ["define"]
         if resource["resource_type"] != self.resource_type:
             raise Exception("Internal error. Wrong resource type passed to schema")
 
         for propname, prop_def in self.properties.items():
-            if type(prop_def.required) == bool:
+            if isinstance(prop_def.required, bool):
                 if prop_def.required:
                     _required_validator(resource, propname)
             else:
@@ -47,15 +74,21 @@ class Schema(object):
 
 
 class Directory(Schema):
+    """
+    Directory is the resource representation of a directory on disk
+    """
     def __init__(self):
         properties = {
-                "location": Property(required=True, mutable=False),
-                "permissions": Property(required=True, mutable=True)
-            }
+            "location": Property(required=True, mutable=False),
+            "permissions": Property(required=True, mutable=True)
+        }
         super().__init__("directory", properties)
 
 
 class File(Schema):
+    """
+    File is the resource representation of a file of disk
+    """
     def __init__(self):
         def custom_validator(resource):
             return _one_of_validator(resource, ["source", "text"])
@@ -71,6 +104,10 @@ class File(Schema):
 
 
 class DummyRefResource(Schema):
+    """
+    DummyRefResource is a noop resource useful for checking how mutable and immutable
+    properties that reference other resources work
+    """
     def __init__(self):
         properties = {
             "mutable_parent": Property(required=False, mutable=True),
@@ -80,14 +117,18 @@ class DummyRefResource(Schema):
         super().__init__("dummy_ref_resource", properties)
 
 
-schemas = {
+SCHEMAS = {
     "directory": Directory(),
     "file": File(),
     "dummy_ref_resource": DummyRefResource()
 }
 
 
-def from_type(type):
-    if type not in schemas:
-        raise Exception("Internal error. Cannot find schema for type {type}".format(type))
-    return schemas[type]
+def from_type(type_):
+    """
+    :param type_: the type of the resource which we want to return
+    :return: the resource
+    """
+    if type_ not in SCHEMAS:
+        raise Exception("Internal error. Cannot find schema for type {type}".format(type=type_))
+    return SCHEMAS[type_]
